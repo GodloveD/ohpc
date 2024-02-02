@@ -20,18 +20,18 @@
 \newcommand{\arch}{x86\_64}
 
 % Define package manager commands
-\newcommand{\pkgmgr}{yum}
+\newcommand{\pkgmgr}{dnf}
 \newcommand{\addrepo}{wget -P /etc/yum.repos.d}
 \newcommand{\chrootaddrepo}{wget -P \$CHROOT/etc/yum.repos.d}
-\newcommand{\clean}{yum clean expire-cache}
-\newcommand{\chrootclean}{yum --installroot=\$CHROOT clean expire-cache}
-\newcommand{\install}{yum -y install}
-\newcommand{\chrootinstall}{yum -y --installroot=\$CHROOT install}
-\newcommand{\groupinstall}{yum -y groupinstall}
-\newcommand{\groupchrootinstall}{yum -y --installroot=\$CHROOT groupinstall}
-\newcommand{\remove}{yum -y remove}
-\newcommand{\upgrade}{yum -y upgrade}
-\newcommand{\chrootupgrade}{yum -y --installroot=\$CHROOT upgrade}
+\newcommand{\clean}{dnf clean expire-cache}
+\newcommand{\chrootclean}{dnf --installroot=\$CHROOT clean expire-cache}
+\newcommand{\install}{dnf -y install}
+\newcommand{\chrootinstall}{dnf -y --installroot=\$CHROOT install}
+\newcommand{\groupinstall}{dnf -y groupinstall}
+\newcommand{\groupchrootinstall}{dnf -y --installroot=\$CHROOT groupinstall}
+\newcommand{\remove}{dnf -y remove}
+\newcommand{\upgrade}{dnf -y upgrade}
+\newcommand{\chrootupgrade}{dnf -y --installroot=\$CHROOT upgrade}
 \newcommand{\tftppkg}{syslinux-tftpboot}
 \newcommand{\beegfsrepo}{https://www.beegfs.io/release/beegfs\_7.2.1/dists/beegfs-rhel8.repo}
 
@@ -71,7 +71,7 @@
 % ohpc_validation_newline
 % ohpc_validation_comment Verify OpenHPC repository has been enabled before proceeding
 % ohpc_validation_newline
-% ohpc_command yum repolist | grep -q OpenHPC
+% ohpc_command dnf repolist | grep -q OpenHPC
 % ohpc_command if [ $? -ne 0 ];then
 % ohpc_command    echo "Error: OpenHPC repository must be enabled locally"
 % ohpc_command    exit 1
@@ -88,8 +88,7 @@
 % ohpc_validation_newline
 % ohpc_validation_comment Disable firewall 
 \begin{lstlisting}[language=bash,keywords={}]
-[sms](*\#*) systemctl disable firewalld
-[sms](*\#*) systemctl stop firewalld
+[sms](*\#*) systemctl disable --now firewalld
 \end{lstlisting}
 % end_ohpc_run
 
@@ -135,10 +134,6 @@
 % begin_ohpc_run
 % ohpc_validation_comment Add SLURM and other components to compute instance
 \begin{lstlisting}[language=bash,literate={-}{-}1,keywords={},upquote=true]
-# copy credential files into $CHROOT to ensure consistent uid/gids for slurm/munge at
-# install. Note that these will be synchronized with future updates via the provisioning system.
-[sms](*\#*) cp /etc/passwd /etc/group  $CHROOT/etc
-
 # Add Slurm client support meta-package and enable munge
 [sms](*\#*) (*\chrootinstall*) ohpc-slurm-client
 [sms](*\#*) chroot $CHROOT systemctl enable munge
@@ -151,10 +146,8 @@
 # Identify master host as local NTP server
 [sms](*\#*) echo "server ${sms_ip} iburst" >> $CHROOT/etc/chrony.conf
 
-# Add kernel drivers (matching kernel version on SMS node)
-[sms](*\#*) (*\chrootinstall*) kernel-`uname -r`
-
 # Include modules user environment
+[sms](*\#*) dnf --installroot=$CHROOT config-manager --set-enabled powertools
 [sms](*\#*) (*\chrootinstall*) lmod-ohpc
 \end{lstlisting}
 % end_ohpc_run
@@ -247,14 +240,10 @@
 \input{common/add_ww_hosts_finalize}
 
 %\clearpage
-\subsubsection{Optional kernel arguments} \label{sec:optional_kargs}
+% \subsubsection{Optional kernel arguments} \label{sec:optional_kargs}
 \input{common/charliecloud_centos_warewulf_post}
 \input{common/conman_post}
 \input{common/kargs_post}
-
-\vspace*{-0.1cm}
-\subsubsection{Optionally configure stateful provisioning}
-\input{common/stateful}
 
 %\vspace*{-0.4cm}
 \clearpage
@@ -277,8 +266,8 @@
 \subsection{MPI Stacks} \label{sec:mpi}
 \input{common/mpi}
 
-\subsection{Performance Tools} \label{sec:install_perf_tools}
-\input{common/perf_tools_with_geopm}
+% \subsection{Performance Tools} \label{sec:install_perf_tools}
+% \input{common/perf_tools_with_geopm}
 
 \subsection{Setup default development environment}
 \input{common/default_dev}

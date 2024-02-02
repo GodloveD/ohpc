@@ -3,19 +3,25 @@
 %\begin{verbatim}
 
 \begin{lstlisting}[language=bash,literate={-}{-}1,keywords={},upquote=true,keepspaces]
-# Configure Warewulf provisioning to use desired internal interface
-[sms](*\#*) perl -pi -e "s/device = eth1/device = ${sms_eth_internal}/" /etc/warewulf/provision.conf
-
 # Enable internal interface for provisioning
 [sms](*\#*) ip link set dev ${sms_eth_internal} up
 [sms](*\#*) ip address add ${sms_ip}/${internal_netmask} broadcast + dev ${sms_eth_internal}
 
-# Restart/enable relevant services to support provisioning
-[sms](*\#*) systemctl enable httpd.service
-[sms](*\#*) systemctl restart httpd
-[sms](*\#*) systemctl enable dhcpd.service
-[sms](*\#*) systemctl enable tftp.socket
-[sms](*\#*) systemctl start tftp.socket
+# Edit the warewulf.conf file to use appropriate interface and settings
+[sms](*\#*) sed -i "s/ipaddr:.*/ipaddr: ${sms_ip}/g" /etc/warewulf/warewulf.conf
+[sms](*\#*) sed -i "s/netmask:.*/netmask: ${internal_netmask}/g" /etc/warewulf/warewulf.conf
+[sms](*\#*) sed -i "s/network:.*/network: ${internal_network}/g" /etc/warewulf/warewulf.conf
+[sms](*\#*) sed -i "s/range start:.*/range start: ${c_ip[0]}/g" /etc/warewulf/warewulf.conf
+[sms](*\#*) sed -i "s/range start:.*/range start: ${c_ip[$num_computes]}/g" /etc/warewulf/warewulf.conf
+[sms](*\#*) sed -i "s/mount: false/mount: true/g" /etc/warewulf/warewulf.conf
+
+# Configuring Warewulf will restart/enable relevant services to support provisioning
+[sms](*\#*) systemctl enable --now warewulfd
+[sms](*\#*) wwctl configure --all
+
+# This line is a fix for a problem with the current Warewulf rpm
+# Hopefully user's can skip this step in a future release
+[sms](*\#*) cp -r /srv/tftpboot/warewulf /var/lib/tftpboot/ 
 \end{lstlisting}
 %\end{verbatim}
 % end_ohpc_run

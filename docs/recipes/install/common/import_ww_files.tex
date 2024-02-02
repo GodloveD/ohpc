@@ -1,14 +1,41 @@
 The \Warewulf{} system includes functionality to import arbitrary files from
-the provisioning server for distribution to managed hosts. This is one way to
-distribute user credentials to {\em compute} nodes. To import local file-based 
-credentials, issue the following:
+the provisioning server for distribution to managed hosts through a system 
+called "overlays". Some files, like \texttt{/etc/passwd}, and \texttt{/etc/hosts}
+handled in this way by default.  Here we add directories and files to the 
+\texttt{generic} overlay that is applied to all nodes. 
 
 % begin_ohpc_run
 % ohpc_comment_header Import files \ref{sec:file_import}
 \begin{lstlisting}[language=bash,literate={-}{-}1,keywords={},upquote=true]
-[sms](*\#*) wwsh file import /etc/passwd
-[sms](*\#*) wwsh file import /etc/group
-[sms](*\#*) wwsh file import /etc/shadow 
+[sms](*\#*) wwctl overlay edit --parents generic /etc/sysconfig/slurmd
+# in the editor, add the following line (without the preceding #)
+# SLURMD_OPTIONS="--conf-server 10.0.0.3"
+
+[sms](*\#*) wwctl overlay mkdir generic --mode 0700 /etc/munge
+[sms](*\#*) wwctl overlay import generic /etc/munge/munge.key
+[sms](*\#*) wwctl overlay chown generic /etc/munge/munge.key $(id -u munge) $(id -g munge)
+[sms](*\#*) wwctl overlay chown generic /etc/munge $(id -u munge) $(id -g munge)
+[sms](*\#*) wwctl overlay edit --parents generic /etc/security/access.conf
+# in the editor, add the following lines (without the preceding #'s)
+# + : root : ALL
+# + : ssh-allowed : ALL
+# - : ALL : ALL
+
+[sms](*\#*) wwctl overlay mkdir generic /etc/pam.d
+[sms](*\#*) wwctl overlay import generic $CHROOT/etc/pam.d/sshd /etc/pam.d/sshd
+[sms](*\#*) wwctl overlay edit generic /etc/pam.d/sshd
+# in the editor, add the following lines (without the preceding #'s)
+# account sufficient pam_access.so
+# account required pam_slurm.so
+
+# add the following to support unprivileged user namespaces for tools like Apptainer
+[sms](*\#*) wwctl overlay import generic /etc/subuid
+[sms](*\#*) wwctl overlay import generic /etc/subgid
+
+# there is a bug in the current ohpc-supported version of Warewulf that produces
+# improper ownership. these lines will fix.
+[sms](*\#*) chown munge:munge /srv/warewulf/overlays/generic/etc/munge/munge.key
+[sms](*\#*) chown munge:munge /srv/warewulf/overlays/generic/etc/munge/
 
 \end{lstlisting}
 % \end_ohpc_run
